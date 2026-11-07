@@ -232,11 +232,11 @@ td.m-xanh{color:var(--xanh);font-weight:700} td.m-vang{color:var(--vang);font-we
 <div id="toast"></div>
 <div id="hop"><div class="the"><p id="hopChu"></p><div class="hai"><button id="hopKhong"></button><button class="chinh" id="hopCo"></button></div></div></div>
 
+<script src="config.js"></script>
 <script>
-/* =========================================================
-   CHỈ CẦN SỬA DÒNG DƯỚI: dán link Web app của Apps Script
-   ========================================================= */
-const API = 'DAN_LINK_APPS_SCRIPT_VAO_DAY';
+/* Link Apps Script nằm trong file config.js (tạo 1 lần trên GitHub).
+   File index.html này KHÔNG cần sửa gì — chỉ việc copy đè khi cập nhật. */
+const API = String(window.API_URL || '').trim();
 
 /* ---------- Hằng số ---------- */
 const MAU = {'Xanh dương':'#1f5fbf','Hồng':'#c2185b','Xanh lá':'#2e7d32','Cam':'#d84315','Tím':'#6a1b9a','Đỏ đô':'#8e1b1b','Xanh ngọc':'#00796b','Nâu':'#6d4c41'};
@@ -250,7 +250,7 @@ function luuLS(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e)
 
 /* ---------- Trạng thái ---------- */
 const qs = new URLSearchParams(location.search);
-const DEMO = qs.get('demo') === '1' || API.indexOf('http') !== 0;
+const DEMO = qs.get('demo') === '1';
 let MA = (qs.get('ma') || '').trim().toUpperCase();
 if (MA) luuLS('ssk_ma', MA); else MA = docLS('ssk_ma', '');
 if (DEMO) MA = 'DEMO';
@@ -773,6 +773,7 @@ window.addEventListener('appinstalled', () => { $('#nutCai').hidden = true; toas
 (function batDau(){
   history.replaceState(null, '');
   if (DEMO) { DL = taoDemo(); HANG = []; hien('chu'); return; }
+  if (API.indexOf('http') !== 0) { baoKhongMa('App chưa nối với Google Sheet.<br>Con cần tạo file <b>config.js</b> và dán link Apps Script vào đó.'); $('#nutThuLai').hidden = true; return; }
   if (!MA) { baoKhongMa('Chưa có mã người dùng.<br>Hãy mở app bằng <b>link riêng</b> mà con gửi.'); $('#nutThuLai').hidden = true; return; }
   const cache = docLS('ssk_cache_' + MA, null);
   if (cache && cache.people) DL = cache;
