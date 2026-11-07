@@ -232,11 +232,12 @@ td.m-xanh{color:var(--xanh);font-weight:700} td.m-vang{color:var(--vang);font-we
 <div id="toast"></div>
 <div id="hop"><div class="the"><p id="hopChu"></p><div class="hai"><button id="hopKhong"></button><button class="chinh" id="hopCo"></button></div></div></div>
 
-<script src="config.js"></script>
+<script src="config.js" onerror="void 0"></script>
 <script>
 /* Link Apps Script nằm trong file config.js (tạo 1 lần trên GitHub).
    File index.html này KHÔNG cần sửa gì — chỉ việc copy đè khi cập nhật. */
-const API = String(window.API_URL || '').trim();
+const API_MAC_DINH = 'https://script.google.com/macros/s/AKfycbws9z55r9t9aj79s9XHGcmIllOVb2qJxDQIWPOEBmcXIX4vrw3nmccQ0KO2zo0mp8WU_Q/exec';
+const API = String(window.API_URL || API_MAC_DINH).trim();
 
 /* ---------- Hằng số ---------- */
 const MAU = {'Xanh dương':'#1f5fbf','Hồng':'#c2185b','Xanh lá':'#2e7d32','Cam':'#d84315','Tím':'#6a1b9a','Đỏ đô':'#8e1b1b','Xanh ngọc':'#00796b','Nâu':'#6d4c41'};
