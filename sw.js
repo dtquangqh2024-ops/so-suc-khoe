@@ -2,8 +2,8 @@
    - Giúp app mở được như ứng dụng, kể cả khi mạng chập chờn
    - Luôn ưu tiên lấy bản mới từ mạng; mất mạng mới dùng bản đã lưu
    - Không động vào dữ liệu gửi tới Google (Apps Script)            */
-const CACHE = 'ssk-v1';
-const FILES = ['./', './index.html', './manifest.json', './icon.png', './icon-192.png', './icon-512.png'];
+const CACHE = 'ssk-v2';
+const FILES = ['./', './index.html', './config.js', './manifest.json', './icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
