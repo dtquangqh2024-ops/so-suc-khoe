@@ -126,6 +126,21 @@ table.bang th,table.bang td{border-bottom:1px solid #e5e5e5;padding:6px 8px;text
 table.bang th{background:#f2f2f2}
 td.m-xanh{color:var(--xanh);font-weight:700} td.m-vang{color:var(--vang);font-weight:700} td.m-do{color:var(--do);font-weight:700}
 .dau-in{display:none}
+/* ---- Thời tiết ---- */
+.tt-dong{background:#fff;border-radius:16px;padding:12px 16px;font-size:21px;display:flex;gap:12px;align-items:center;border:2px solid #e3dccb}
+.tt-dong .bt{font-size:40px;line-height:1}
+.tt-dong b{font-size:24px}
+.tt-dong small{display:block;font-size:17px;color:var(--phu)}
+.tt-canh{background:#e3f2fd;border:3px solid #1565c0;color:#0d3c78;border-radius:16px;padding:12px 16px;font-size:21px;font-weight:700}
+.tt-canh.nong{background:#fff3e0;border-color:#e65100;color:#7a2e00}
+.nhan-xet{font-size:18px;line-height:1.5}
+.nhan-xet p{margin:6px 0}
+.nhan-xet .luu-y{font-size:15px;color:var(--phu);margin-top:10px}
+table.nhom{border-collapse:collapse;font-size:17px;margin:8px 0;width:100%;max-width:560px}
+table.nhom th,table.nhom td{border:1px solid #e0e0e0;padding:7px 9px;text-align:center}
+table.nhom th{background:#f5f5f5}
+table.nhom td:first-child{text-align:left}
+.ky button{min-height:48px}
 
 @media print{
   .khong-in,#toast,#hop{display:none!important}
@@ -150,10 +165,13 @@ td.m-xanh{color:var(--xanh);font-weight:700} td.m-vang{color:var(--vang);font-we
   <nav class="doi-nguoi" id="doiNguoi" hidden></nav>
   <div class="noi">
     <div class="bang-tin" id="bangTin" hidden></div>
+    <div class="tt-dong" id="ttDong" hidden></div>
+    <div class="tt-canh" id="ttCanh" hidden></div>
     <button class="nut" data-nhap="HA"><span class="bieu">❤️</span><span><span class="chu">Huyết áp</span><span class="tt" id="ttHA"></span></span></button>
     <button class="nut" data-nhap="DH"><span class="bieu">🩸</span><span><span class="chu">Tiểu đường</span><span class="tt" id="ttDH"></span></span></button>
     <button class="nut" data-nhap="CAN"><span class="bieu">⚖️</span><span><span class="chu">Cân nặng</span><span class="tt" id="ttCAN"></span></span></button>
     <button class="nut-phu" id="nutGanDay">📋 Xem các lần gần đây</button>
+    <button class="nut-phu" id="nutCuaToi">📈 Biểu đồ & thống kê</button>
     <button class="nut-phu" id="nutTongHop" hidden>📊 Tổng hợp cả nhà</button>
     <button class="nut-phu" id="nutCai" hidden style="border-color:var(--mau);color:var(--mau)">📲 Cài lên màn hình chính</button>
   </div>
@@ -215,6 +233,9 @@ td.m-xanh{color:var(--xanh);font-weight:700} td.m-vang{color:var(--vang);font-we
     <div class="khoi"><h4>❤️ Huyết áp</h4><div class="tom" id="tomHA"></div><div class="bieu-do"><canvas id="bdHA"></canvas></div></div>
     <div class="khoi"><h4>🩸 Đường huyết</h4><div class="tom" id="tomDH"></div><div class="bieu-do"><canvas id="bdDH"></canvas></div></div>
     <div class="khoi"><h4>⚖️ Cân nặng</h4><div class="tom" id="tomCAN"></div><div class="bieu-do"><canvas id="bdCAN"></canvas></div></div>
+    <div class="khoi"><h4>🌡️ Huyết áp và thời tiết Hà Nội</h4><div class="tom" id="tomTT"></div>
+      <div class="bieu-do" style="height:300px"><canvas id="bdTT"></canvas></div>
+      <div class="nhan-xet" id="nhanXetTT"></div></div>
     <div class="khoi"><h4>Bảng chi tiết</h4><div id="bangChiTiet" style="overflow-x:auto"></div></div>
     <button class="nut-phu khong-in" data-ve style="max-width:400px">⬅ Quay lại</button>
   </div>
@@ -376,6 +397,32 @@ function veTrangChu(){
   ['HA','DH','CAN'].forEach(l => { $('#tt'+l).innerHTML = trangThai(p, l); });
   $('#nutTongHop').hidden = !DL.admin;
   veBangTin();
+  veThoiTietChu();
+}
+
+/* ================= THỜI TIẾT ================= */
+const keyNgay = d => { d = new Date(d); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); };
+function ttNgay(k){ return (DL.thoiTiet || []).find(x => x.d === k); }
+function soTT(x){ return (x === '' || x == null || isNaN(x)) ? null : Number(x); }
+function bieuTuong(t){ if (!t) return '🌤'; if (soTT(t.mua) >= 5) return '🌧'; if (soTT(t.mua) >= 0.5) return '🌦'; if (soTT(t.tmin) < 15) return '❄️'; if (soTT(t.tmax) >= 35) return '🔥'; return '🌤'; }
+function veThoiTietChu(){
+  const dong = $('#ttDong'), canh = $('#ttCanh');
+  const nay = new Date(), homNay = ttNgay(keyNgay(nay));
+  const homQua = ttNgay(keyNgay(new Date(nay.getTime() - 86400000)));
+  const maiK = ttNgay(keyNgay(new Date(nay.getTime() + 86400000)));
+  if (!homNay) { dong.hidden = true; canh.hidden = true; return; }
+  dong.hidden = false;
+  dong.innerHTML = `<span class="bt">${bieuTuong(homNay)}</span><div>${esc(DL.viTri || 'Hà Nội')} hôm nay: <b style="white-space:nowrap">${Math.round(homNay.tmin)}–${Math.round(homNay.tmax)}°C</b>`
+    + `<small>Độ ẩm ${so(homNay.am)}%${soTT(homNay.mua) >= 0.5 ? ' · có mưa' : ''}</small></div>`;
+  // Nhắc khi trời thay đổi đột ngột
+  let loi = '', nong = false;
+  const doiNay = (homQua && soTT(homNay.ttb) != null && soTT(homQua.ttb) != null) ? homNay.ttb - homQua.ttb : null;
+  const doiMai = (maiK && soTT(maiK.ttb) != null && soTT(homNay.ttb) != null) ? maiK.ttb - homNay.ttb : null;
+  if (doiNay != null && doiNay <= -4) loi = `❄️ Hôm nay lạnh hơn hôm qua ${so(-doiNay)}°C. Giữ ấm và nhớ đo huyết áp.`;
+  else if (soTT(homNay.tmin) != null && homNay.tmin < 12) loi = `❄️ Trời rét (thấp nhất ${so(homNay.tmin)}°C). Giữ ấm, không ra ngoài sớm.`;
+  else if (doiMai != null && doiMai <= -4) loi = `❄️ Ngày mai trời trở lạnh, giảm khoảng ${so(-doiMai)}°C. Chuẩn bị áo ấm.`;
+  else if (soTT(homNay.tmax) != null && homNay.tmax >= 37) { loi = `🔥 Trời nắng nóng (cao nhất ${so(homNay.tmax)}°C). Uống đủ nước, tránh nắng trưa.`; nong = true; }
+  canh.hidden = !loi; canh.textContent = loi; canh.classList.toggle('nong', nong);
 }
 function trangThai(p, l){
   const r = banGhi(p.ma, l)[0];
@@ -406,6 +453,7 @@ $('#doiNguoi').addEventListener('click', e => {
 $$('[data-nhap]').forEach(b => b.addEventListener('click', () => moNhap(b.dataset.nhap)));
 $('#nutGanDay').onclick = () => { TAB = 'HA'; di('ganDay'); };
 $('#nutTongHop').onclick = () => di('tongHop');
+$('#nutCuaToi').onclick = () => { MA_CHI_TIET = nguoiDangChon().ma; di('chiTiet'); };
 $$('[data-ve]').forEach(b => b.onclick = quayLai);
 
 /* ================= NHẬP KẾT QUẢ ================= */
@@ -576,7 +624,7 @@ async function taiLai(imLang){
     // giữ lại các lần đo chưa gửi được
     const coSan = new Set(kq.records.map(r => r.id));
     HANG.forEach(h => { if (!coSan.has(h.rec.id)) kq.records.push(h.rec); });
-    DL = {admin:kq.admin, people:kq.people, records:kq.records};
+    DL = {admin:kq.admin, people:kq.people, records:kq.records, thoiTiet:kq.thoiTiet || [], viTri:kq.viTri || 'Hà Nội'};
     luuCache();
     veBangTin.loiTai = false;
   } catch (e) {
@@ -686,18 +734,24 @@ function veChiTiet(){
     if (r.loai==='HA') kq = r.thu + '/' + r.truong + (r.mach ? ' · mạch ' + r.mach : '') + (r.thuoc ? ' · ' + r.thuoc : '');
     if (r.loai==='DH') kq = so(r.dh) + ' ' + (r.donVi||'') + ' · ' + (r.lucDo||'');
     if (r.loai==='CAN') kq = so(r.can) + ' kg';
-    return `<tr><td>${ngayDai(d)} ${gioPhut(d)}</td><td>${LOAI[r.loai]?LOAI[r.loai].ten:r.loai}</td><td>${esc(kq)}</td><td class="${LOP[r.muc]||''}">${esc(r.muc||'')}</td><td>${esc(r.ghiChu||'')}</td></tr>`;
+    const w = ttNgay(keyNgay(d));
+    const wTxt = w ? so(w.tmin) + '–' + so(w.tmax) + '°C' + (soTT(w.doi) != null && w.doi <= -3 ? ' ↓' + so(-w.doi) : '') : '';
+    return `<tr><td>${ngayDai(d)} ${gioPhut(d)}</td><td>${LOAI[r.loai]?LOAI[r.loai].ten:r.loai}</td><td>${esc(kq)}</td><td class="${LOP[r.muc]||''}">${esc(r.muc||'')}</td><td>${wTxt}</td><td>${esc(r.ghiChu||'')}</td></tr>`;
   }).join('');
-  $('#bangChiTiet').innerHTML = dongs ? `<table class="bang"><thead><tr><th>Ngày giờ</th><th>Loại</th><th>Kết quả</th><th>Mức</th><th>Ghi chú</th></tr></thead><tbody>${dongs}</tbody></table>` : '<div class="trong">Không có dữ liệu.</div>';
+  $('#bangChiTiet').innerHTML = dongs ? `<table class="bang"><thead><tr><th>Ngày giờ</th><th>Loại</th><th>Kết quả</th><th>Mức</th><th>Thời tiết HN</th><th>Ghi chú</th></tr></thead><tbody>${dongs}</tbody></table>` : '<div class="trong">Không có dữ liệu.</div>';
 
-  const bdLoi = hien => ['bdHA','bdDH','bdCAN'].forEach(id => {
+  const pt = phanTichTT(ha);
+  $('#tomTT').innerHTML = pt.tom;
+  $('#nhanXetTT').innerHTML = pt.nhanXet;
+
+  const bdLoi = hien => ['bdHA','bdDH','bdCAN','bdTT'].forEach(id => {
     const c = $('#'+id), khung = c.parentElement;
     let tb = khung.querySelector('.trong');
     if (hien && !tb) { tb = document.createElement('div'); tb.className = 'trong'; tb.textContent = 'Không tải được biểu đồ (cần mạng). Vào lại trang này khi có mạng.'; khung.appendChild(tb); }
     if (!hien && tb) tb.remove();
     c.style.display = hien ? 'none' : '';
   });
-  napChart().then(() => { bdLoi(false); veBieuDo(p, ha, dh, can); })
+  napChart().then(() => { bdLoi(false); veBieuDo(p, ha, dh, can); veBieuDoTT(pt.ngay); })
     .catch(() => { napChart._p = null; bdLoi(true); });
 }
 function veBieuDo(p, ha, dh, can){
@@ -721,6 +775,89 @@ function veBieuDo(p, ha, dh, can){
     {label:'Cân nặng (kg)', data:can.map(r=>r.can), borderColor:'#2e7d32', backgroundColor:'#2e7d32', tension:.2}
   ]}});
 }
+/* ---- Huyết áp và thời tiết ---- */
+function phanTichTT(ha){
+  // gộp huyết áp theo ngày (nếu 1 ngày đo nhiều lần thì lấy trung bình)
+  const theoNgay = {};
+  ha.forEach(r => { const k = keyNgay(r.t); (theoNgay[k] = theoNgay[k] || []).push(r); });
+  const ngay = Object.keys(theoNgay).sort().map(k => {
+    const ds = theoNgay[k], w = ttNgay(k);
+    return {k, thu: tb(ds,'thu'), truong: tb(ds,'truong'), xau: ds.some(r => r.muc !== 'Xanh'), w,
+            tmin: w ? soTT(w.tmin) : null, tmax: w ? soTT(w.tmax) : null, doi: w ? soTT(w.doi) : null};
+  });
+  const coTT = ngay.filter(x => x.tmin != null);
+  if (!ha.length) return {ngay, tom: 'Chưa có lần đo huyết áp nào trong khoảng này.', nhanXet: ''};
+  if (!coTT.length) return {ngay, tom: 'Chưa có dữ liệu thời tiết cho khoảng này.',
+    nhanXet: '<p>Dữ liệu thời tiết sẽ có sau khi con bật chức năng cập nhật thời tiết trong Google Sheet.</p>'};
+
+  const nhom = (ten, loc) => { const ds = coTT.filter(loc); return {ten, n: ds.length,
+    thu: ds.length ? tb(ds,'thu') : null, truong: ds.length ? tb(ds,'truong') : null,
+    xau: ds.filter(x => x.xau).length}; };
+  const lanh = nhom('❄️ Lạnh (dưới 18°C)', x => x.tmin < 18);
+  const mat  = nhom('🌤 Mát (18–24°C)', x => x.tmin >= 18 && x.tmin < 24);
+  const nong = nhom('🔥 Nóng (từ 24°C)', x => x.tmin >= 24);
+  const troLanh = nhom('Trời trở lạnh đột ngột (giảm từ 3°C)', x => x.doi != null && x.doi <= -3);
+  const conLai  = nhom('Các ngày còn lại', x => !(x.doi != null && x.doi <= -3));
+  const hangBang = g => `<tr><td>${g.ten}</td><td>${g.n}</td><td>${g.n ? '<b>' + Math.round(g.thu) + '/' + Math.round(g.truong) + '</b>' : '—'}</td><td>${g.n ? g.xau : '—'}</td></tr>`;
+  const bang = (ds) => `<table class="nhom"><tr><th>Nhóm ngày</th><th>Số ngày</th><th>HA TB</th><th>Vàng/đỏ</th></tr>${ds.map(hangBang).join('')}</table>`;
+
+  // hệ số tương quan giữa số trên và nhiệt độ thấp nhất
+  let r = null;
+  if (coTT.length >= 15) {
+    const xs = coTT.map(x => x.tmin), ys = coTT.map(x => x.thu);
+    const mx = xs.reduce((a,b)=>a+b,0)/xs.length, my = ys.reduce((a,b)=>a+b,0)/ys.length;
+    let sxy = 0, sxx = 0, syy = 0;
+    xs.forEach((x,i) => { sxy += (x-mx)*(ys[i]-my); sxx += (x-mx)**2; syy += (ys[i]-my)**2; });
+    r = (sxx && syy) ? sxy / Math.sqrt(sxx*syy) : null;
+  }
+
+  const y = [];
+  if (lanh.n >= 5 && (nong.n >= 5 || mat.n >= 5)) {
+    const so2 = nong.n >= 5 ? nong : mat;
+    const chenh = Math.round(lanh.thu - so2.thu);
+    if (Math.abs(chenh) >= 4) y.push(`Những ngày <b>lạnh</b>, số trên trung bình <b>${chenh > 0 ? 'cao hơn' : 'thấp hơn'} ${Math.abs(chenh)} mmHg</b> so với những ngày ${so2 === nong ? 'nóng' : 'mát'}.`);
+    else y.push(`Huyết áp những ngày lạnh và ngày ${so2 === nong ? 'nóng' : 'mát'} <b>gần như nhau</b> (chênh ${Math.abs(chenh)} mmHg, nằm trong dao động bình thường).`);
+  } else y.push('Chưa đủ số ngày đo ở cả mùa lạnh và mùa nóng để so sánh. Chọn khoảng <b>1 năm</b> để xem đầy đủ hơn.');
+  if (troLanh.n >= 3 && conLai.n >= 5) {
+    const c2 = Math.round(troLanh.thu - conLai.thu);
+    y.push(Math.abs(c2) >= 4
+      ? `Vào những ngày <b>trời trở lạnh đột ngột</b>, số trên trung bình <b>${c2 > 0 ? 'cao hơn' : 'thấp hơn'} ${Math.abs(c2)} mmHg</b> so với ngày thường (${troLanh.n} ngày).`
+      : `Những ngày trời trở lạnh đột ngột (${troLanh.n} ngày), huyết áp <b>không thay đổi rõ</b> so với ngày thường.`);
+  }
+  if (r != null) {
+    const a = Math.abs(r);
+    const muc = a < 0.2 ? 'gần như <b>không thấy liên quan</b>' : a < 0.4 ? '<b>có liên quan nhẹ</b>' : '<b>có liên quan khá rõ</b>';
+    y.push(`Xét cả khoảng thời gian, nhiệt độ và huyết áp ${muc}` + (a >= 0.2 ? (r < 0 ? ': trời càng lạnh, huyết áp càng có xu hướng cao.' : ': trời càng nóng, huyết áp càng có xu hướng cao.') : '.')
+      + ` <span style="color:var(--phu)">(hệ số tương quan r = ${r.toFixed(2)})</span>`);
+  }
+  const nhanXet = bang([lanh, mat, nong]) + (troLanh.n ? bang([troLanh, conLai]) : '')
+    + y.map(t => `<p>• ${t}</p>`).join('')
+    + `<p class="luu-y">Thời tiết lấy theo Hà Nội, chia nhóm theo nhiệt độ thấp nhất trong ngày (thường vào sáng sớm, gần giờ đo). Đây là so sánh thống kê đơn giản để tham khảo và trao đổi với bác sĩ, không phải chẩn đoán.</p>`;
+  return {ngay, tom: `Có thời tiết cho <b>${coTT.length}/${ngay.length}</b> ngày đo huyết áp.`, nhanXet};
+}
+function veBieuDoTT(ngay){
+  if (!ngay.length) return;
+  // trục ngày liên tục từ ngày đầu đến hôm nay
+  const dau = new Date(ngay[0].k + 'T00:00:00'), cuoi = new Date(); cuoi.setHours(0,0,0,0);
+  const map = {}; ngay.forEach(x => map[x.k] = x);
+  const nhan = [], thu = [], tr = [], tmin = [], tmax = [];
+  for (let d = new Date(dau); d <= cuoi; d.setDate(d.getDate() + 1)) {
+    const k = keyNgay(d), x = map[k], w = ttNgay(k);
+    nhan.push(pad(d.getDate()) + '/' + pad(d.getMonth()+1));
+    thu.push(x ? Math.round(x.thu) : null); tr.push(x ? Math.round(x.truong) : null);
+    tmin.push(w ? soTT(w.tmin) : null); tmax.push(w ? soTT(w.tmax) : null);
+  }
+  bieuDo.tt = new Chart($('#bdTT'), {type:'line', data:{labels:nhan, datasets:[
+    {label:'Số trên', data:thu, borderColor:'#c62828', backgroundColor:'#c62828', yAxisID:'y', spanGaps:true, pointRadius:2, borderWidth:1.5, tension:.2},
+    {label:'Số dưới', data:tr, borderColor:'#1565c0', backgroundColor:'#1565c0', yAxisID:'y', spanGaps:true, pointRadius:2, borderWidth:1.5, tension:.2},
+    {label:'Nhiệt độ thấp nhất (°C)', data:tmin, borderColor:'#00838f', backgroundColor:'rgba(0,131,143,.12)', yAxisID:'y1', pointRadius:0, borderWidth:2, tension:.3, fill:'+1'},
+    {label:'Nhiệt độ cao nhất (°C)', data:tmax, borderColor:'#ef6c00', backgroundColor:'#ef6c00', yAxisID:'y1', pointRadius:0, borderWidth:1.5, borderDash:[5,4], tension:.3}
+  ]}, options:{responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:'index', intersect:false},
+    plugins:{legend:{position:'bottom'}},
+    scales:{x:{ticks:{maxRotation:0, autoSkip:true, maxTicksLimit:8}},
+      y:{position:'left', title:{display:true, text:'mmHg'}},
+      y1:{position:'right', title:{display:true, text:'°C'}, grid:{drawOnChartArea:false}}}}});
+}
 $('#kyChiTiet').addEventListener('click', e => { const b = e.target.closest('[data-ky]'); if (!b) return; KY = Number(b.dataset.ky); veChiTiet(); });
 $('#nutIn').onclick = () => window.print();
 
@@ -729,14 +866,30 @@ function taoDemo(){
   const people = [['BC','Bố Cường','Xanh dương','mmol/L'],['MN','Mẹ Ngân','Hồng','mmol/L'],['BT','Bố Tuấn','Xanh lá','mmol/L'],['MB','Mẹ Bảy','Cam','mg/dL']]
     .map(([ma,ten,mau,donVi]) => ({ma,ten,mau,donVi}));
   const records = [], bayGio = new Date();
+  // thời tiết mẫu kiểu Hà Nội: đông ~17°C, hè ~30°C, có vài đợt gió mùa
+  const thoiTiet = []; let ttbTruoc = null, gioMua = 0;
+  for (let d = 380; d >= -2; d--) {
+    const nd = new Date(bayGio.getTime() - d*86400000);
+    const doy = Math.floor((nd - new Date(nd.getFullYear(),0,0)) / 86400000);
+    if (Math.random() < .03 && (doy < 90 || doy > 300)) gioMua = 4;
+    let ttb = 23.5 - 6.5*Math.cos(2*Math.PI*(doy-15)/365) + (Math.random()*2 - 1) - (gioMua > 0 ? 5 : 0);
+    gioMua = Math.max(0, gioMua - 1);
+    ttb = Math.round(ttb*10)/10;
+    const tmin = Math.round((ttb - 3 - Math.random())*10)/10, tmax = Math.round((ttb + 3.5 + Math.random()*1.5)*10)/10;
+    thoiTiet.push({d: keyNgay(nd), tmin, tmax, ttb, t7: tmin + .5, doi: ttbTruoc == null ? '' : Math.round((ttb - ttbTruoc)*10)/10,
+      am: Math.round(70 + Math.random()*20), ap: Math.round(1012 - (ttb-24)*0.8), mua: Math.random() < .25 ? Math.round(Math.random()*20*10)/10 : 0, loai: d > 0 ? 'Thực tế' : 'Dự báo'});
+    ttbTruoc = ttb;
+  }
+  const ttMap = {}; thoiTiet.forEach(x => ttMap[x.d] = x);
   people.forEach((p, i) => {
     let kg = 52 + i*6;
-    for (let d = 60; d >= 0; d--) {
+    for (let d = 365; d >= 0; d--) {
       const ngay = new Date(bayGio.getTime() - d*86400000);
       const t = new Date(ngay); t.setHours(7, Math.floor(Math.random()*40), 0, 0);
       if (t > bayGio) continue;
       if (Math.random() < .85) {
-        const thu = Math.round(124 + i*5 + Math.random()*26 - 12), tr = Math.round(78 + Math.random()*14 - 6), mach = Math.round(66 + Math.random()*18);
+        const w = ttMap[keyNgay(t)], lanhThem = w ? Math.max(0, 22 - w.tmin) * 0.7 : 0;
+        const thu = Math.round(118 + i*5 + lanhThem + Math.random()*22 - 11), tr = Math.round(78 + Math.random()*14 - 6), mach = Math.round(66 + Math.random()*18);
         records.push({id:'d'+records.length, t:t.toISOString(), ma:p.ma, loai:'HA', thu, truong:tr, mach, thuoc:'Đã uống thuốc', muc:danhGiaHA(p,thu,tr,mach).muc});
       }
       if (d % 3 === i % 3) {
@@ -749,7 +902,7 @@ function taoDemo(){
       if (d % 7 === 2) { kg = Math.round((kg + Math.random()*1 - .5)*10)/10; records.push({id:'d'+records.length, t:t.toISOString(), ma:p.ma, loai:'CAN', can:kg, muc:'Xanh'}); }
     }
   });
-  return {admin:true, people, records};
+  return {admin:true, people, records, thoiTiet, viTri:'Hà Nội'};
 }
 
 /* ================= CÀI NHƯ ỨNG DỤNG ================= */
